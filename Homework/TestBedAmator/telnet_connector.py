@@ -68,8 +68,9 @@ class TelnetConnector:
 
         if self.device.type == 'firewall':
             self.FTD_init()
+            return 0
 
-        self.connection.write(b'')
+        self.connection.write(b'en\n')
 
         self.connection.write(b'conf t\n')
 
@@ -143,7 +144,7 @@ class TelnetConnector:
         self.connection.write(f'username {self.username} secret {self.password.plaintext}\n'.encode())
         self.connection.expect([f"{self.hostname}\(config\)#".encode()])
         self.connection.write(b'crypto key generate rsa\n')
-        self.connection.expect([b'How many bits in the modulus [512]'], timeout=5)
+        self.connection.expect([b'How many bits in the modulus'], timeout=5)
         self.connection.write(b'1024\n')
         self.connection.expect([f"{self.hostname}\(config\)#".encode()])
         self.connection.write(b'ip ssh version 2\n')
@@ -179,8 +180,6 @@ class TelnetConnector:
         self.connection.write(b"exit\n")
         self.connection.expect([f"{self.hostname}\\(config\\)#".encode()])
 
-
-
     def FTD_init(self) -> None:
         """
         Automates the initial config on FTD:
@@ -191,62 +190,61 @@ class TelnetConnector:
         4. Configures management interface (manual IP)
         5. Sets hostname
         """
-        self.connection.expect([b'firepower login:'], timeout=5)
+        self.connection.expect([b'firepower login:'], timeout=10)
         self.connection.write(b'admin\n')
 
-        self.connection.expect([b'Password:'])
+        self.connection.expect([b'Password:'], timeout=5)
         self.connection.write(b'Admin123\n')
 
-        self.connection.expect([b'Press <ENTER> to display the EULA:'])
+        self.connection.expect([b'Press <ENTER> to display the EULA:'], timeout=5)
         self.connection.write(b'\n')
 
         for _ in range(15):
             self.connection.write(b' ')
             time.sleep(0.5)
 
-        self.connection.expect([b'AGREE to the EULA:'])
+        self.connection.expect([b'AGREE to the EULA:'], timeout=5)
         self.connection.write(b'\n')
 
-        self.connection.expect([b'Enter new password:'])
+        self.connection.expect([b'Enter new password:'], timeout=5)
         self.connection.write(b'Cisco!23\n')
 
-        self.connection.expect([b'Confirm new password:'])
+        self.connection.expect([b'Confirm new password:'], timeout=5)
         self.connection.write(b'Cisco!23\n')
 
-        self.connection.expect([b'Do you want to configure IPv4? (y/n) [y]:'])
+        self.connection.expect([b'Do you want to configure IPv4? (y/n) [y]:'], timeout=5)
         self.connection.write(b'y\n')
 
-        self.connection.expect([b'Do you want to configure IPv6? (y/n) [n]:'])
+        self.connection.expect([b'Do you want to configure IPv6? (y/n) [n]:'], timeout=5)
         self.connection.write(b'n\n')
 
-        self.connection.expect([b'Configure IPv4 via DHCP or manually? (dhcp/manual) [manual]:'])
+        self.connection.expect([b'Configure IPv4 via DHCP or manually? (dhcp/manual) [manual]:'], timeout=5)
         self.connection.write(b'manual\n')
 
-        self.connection.expect([b'Enter an IPv4 address for the management interface [192.168.45.45]:'])
+        self.connection.expect([b'Enter an IPv4 address for the management interface [192.168.45.45]:'], timeout=5)
         self.connection.write(b'192.168.104.2\n')
 
-        self.connection.expect([b'Enter an IPv4 netmask for the management interface [255.255.255.0]'])
+        self.connection.expect([b'Enter an IPv4 netmask for the management interface [255.255.255.0]'], timeout=5)
         self.connection.write(b'255.255.255.0\n')
 
-        self.connection.expect([b'Enter the IPv4 default gateway for the management interface [192.168.104.1]:'])
+        self.connection.expect([b'Enter the IPv4 default gateway for the management interface [192.168.104.1]:'],
+                               timeout=5)
         self.connection.write(b'192.168.104.1\n')
 
-        self.connection.expect([b'Enter a fully qualified hostname for this system [firepower]:'])
+        self.connection.expect([b'Enter a fully qualified hostname for this system \[firepower\]:'], timeout=5)
         self.connection.write(f'{self.hostname}\n'.encode())
 
-        self.connection.expect([b"Enter a comma-separated list of DNS severs or 'none' []"])
+        self.connection.expect([b"Enter a comma-separated list of DNS servers or 'none' \[\]"], timeout=5)
         self.connection.write(b'none\n')
 
-        self.connection.expect([b"Enter a comma-separated list of search domains or 'none' []"])
+        self.connection.expect([b"Enter a comma-separated list of search domains or 'none' \[\]"], timeout=10)
         self.connection.write(b'none\n')
 
-        self.connection.expect([b'Manage the device locally? (yes/no) [yes]:'])
+        self.connection.expect([b'Manage the device locally? (yes/no) [yes]:'], timeout=5)
         self.connection.write(b'yes\n')
 
-        self.connection.expect([b'>'])
         self.connection.write(b'exit\n')
 
         return 0
-
 
 

@@ -30,13 +30,17 @@ class SSHConnector:
         self.username = self.ssh_con['username']
         self.password = self.ssh_con['password'].plaintext
 
+        secret = None
+        if hasattr(self.device.credentials, 'enable'):
+            secret = self.device.credentials.enable.password.plaintext
+
         self.connection = ConnectHandler(
             device_type='cisco_ios',
             ip=self.ip,
             port=self.port,
             username=self.username,
             password=self.password,
-            secret=self.device.credentials.enable.password.plaintext
+            secret=secret
         )
 
     def config_interfaces(self) -> None:

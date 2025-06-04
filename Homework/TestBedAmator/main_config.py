@@ -63,7 +63,7 @@ class TestClass(aetest.Testcase):
                 connector.connect(item)
                 connector.initial_configuration()
 
-            if 'ssh' in item.connections:
+            if 'ssh' in item.connections and item.os != 'ftd':
                 connector = SSHConnector()
                 connector.connect(item)
                 connector.config_interfaces()
@@ -78,20 +78,16 @@ class TestClass(aetest.Testcase):
         """
 
         #some ipv4 to test if the ping works
-        ip_list = [
-            '192.168.11.1',
-            '192.168.102.1',
-            '192.168.102.2',
-            '192.168.103.1',
-            '192.168.103.2',
-            '192.168.104.1',
-            '192.168.104.2',
-            '192.168.105.1',
-            '192.168.105.11',
-            '192.168.108.1',
-            '192.168.107.1',
-            '192.168.106.1',
-        ]
+        dev = tb.devices
+        ip_list = []
+
+        for device in dev.values():
+            for interface in device.interfaces.values():
+                if interface.ipv4:
+                    ip = str(interface.ipv4).split('/')[0]
+                    if ip.endswith('.1'):
+                        ip_list.append(ip)
+
         for ip in ip_list:
             try:
                 output = subprocess.check_output(
@@ -100,12 +96,12 @@ class TestClass(aetest.Testcase):
                     text=True)
 
                 if 'bytes from' in output:
-                    print("Ping is working")
+                    print(f"Ping to {ip} is working")
                 else:
-                    print("Ping failed")
+                    print(f"Ping to {ip} failed")
 
             except subprocess.CalledProcessError:
-                print("Ping failed")
+                print(f"Ping to {ip} failed")
 
     def set_ip_on_ubuntu(self) -> None:
         """
@@ -117,20 +113,6 @@ class TestClass(aetest.Testcase):
         ubuntu_ip = '192.168.11.21/24'
         gateway_ip = '192.168.11.1'
 
-        #Dictonary that includes all the networks in the topology
-        dict_of_destinations = \
-            {
-            "cloud": '192.168.12.0/24',
-             "net101": '192.168.101.0/24',
-             "net102": '192.168.102.0/24',
-             'net103': '192.168.103.0/24',
-             "net104": "192.168.104.0/24",
-             "net108": "192.168.108.0/24",
-             "net107": "192.168.107.0/24",
-             "net105": "192.168.105.0/24",
-             "net106": "192.168.106.0/24",
-             'net 109': "192.168.109.0/24"
-            }
         # Assign the IP address and bring the interface up
         with subprocess.Popen(['sudo', 'ip', 'address', "add", ubuntu_ip, "dev", interface],
                          stdout=subprocess.PIPE) as _:
@@ -140,11 +122,21 @@ class TestClass(aetest.Testcase):
                          stdout=subprocess.PIPE) as _:
             pass
 
-        # Add all required static routes
-        for value in dict_of_destinations.values():
-            with subprocess.Popen(['sudo', "ip", "route", "add", value, "via", gateway_ip],
-                             stdout=subprocess.PIPE) as _:
+        dev = tb.devices
+        net_list = []
+
+        for device in dev.values():
+            for value in device.interfaces.values():
+                if value.ipv4:
+                    network = ('.'.join(str(value.ipv4).split('/')[0].split('.')[0:3]) + '.0/24')
+                    if network not in net_list:
+                        net_list.append(network)
+
+        for net in net_list:
+            with subprocess.Popen(['sudo', "ip", "route", "add", net, "via", gateway_ip],
+                                  stdout=subprocess.PIPE) as _:
                 pass
+
 
 
 if __name__ == '__main__':
